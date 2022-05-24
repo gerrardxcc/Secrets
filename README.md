@@ -10,3 +10,5 @@ This website has been implemented with six level of security:
 - Level 1 - Username and Password Only
 
 ![Home-page](/public/images/Secrets.png)
+![Home-page](/public/images/register.png)
+![Home-page](/public/images/login.png)
