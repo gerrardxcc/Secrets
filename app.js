@@ -32,7 +32,8 @@ mongoose.connect('mongodb://localhost:27017/userDB', {
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-  googleId:String
+  googleId: String,
+  secret: String
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -55,10 +56,12 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.CLIENT_SECRET,
     callbackURL: "http://localhost:3000/auth/google/secrets"
   },
-  (accessToken, refreshToken, profile, cb)=>{
+  (accessToken, refreshToken, profile, cb) => {
     console.log(profile); // Print out user info
 
-    User.findOrCreate({ googleId: profile.id }, (err, user) => {
+    User.findOrCreate({
+      googleId: profile.id
+    }, (err, user) => {
       return cb(err, user);
     });
   }
@@ -68,15 +71,15 @@ app.get('/', (req, res) => {
   res.render('home');
 });
 
-app.get('/auth/google', passport.authenticate('google',{
-    scope: ['profile']
+app.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile']
 }));
 
 app.get("/auth/google/secrets",
   passport.authenticate('google', {
     failureRedirect: "/login"
   }),
-  (req, res)=> {
+  (req, res) => {
     // Successful authentication, redirect secrests
     res.redirect("/secrets");
   });
@@ -90,16 +93,49 @@ app.get('/register', (req, res) => {
 });
 
 app.get('/secrets', (req, res) => {
+  User.find({'secret': {$ne: null}}, (err, foundUsers)=>{
+    if(err){
+      console.log(err);
+    } else {
+      if(foundUsers){
+        res.render('secrets', {usersWithSecrets: foundUsers});
+      }
+    }
+  });
+});
+
+app.get('/submit', (req, res) => {
   if (req.isAuthenticated()) {
-    res.render('secrets');
+    res.render('submit');
   } else {
     res.redirect('/login');
   }
 });
 
+app.post('/submit', (req, res) => {
+  const submittedSecrest = req.body.secret;
+
+  console.log(req.user.id);
+
+  User.findById(req.user._id.toString(), (err, foundUser) => {
+    if (err) {
+      console.log(err);
+    } else {
+      if (foundUser) {
+        foundUser.secret = submittedSecrest;
+        foundUser.save(() => {
+          res.redirect('/secrets')
+        });
+      }
+    }
+  });
+});
+
 app.get('/logout', function(req, res, next) {
   req.logout(function(err) {
-    if (err) { return next(err); }
+    if (err) {
+      return next(err);
+    }
     res.redirect('/');
   });
 });
